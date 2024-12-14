@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: 3.12.0 
 
-      -name: Navigate to the directory
+      - name: Navigate to the directory
         working-directory: ./src/wishlistservice
         run: pwd
 
