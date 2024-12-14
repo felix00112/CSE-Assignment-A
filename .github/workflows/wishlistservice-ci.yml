@@ -35,17 +35,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 3. Tests ausführen
+      # 3. Run tests
       - name: Run tests
         working-directory: ./src/wishlistservice
         run: |
           . venv/bin/activate
-          pytest
+          pytest --cov --cov-report=xml
 
-      # 4. Docker-Image bauen
+      # 4. Upload results to Codecov
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # 5. Build Docker-Image
       - name: Build Docker image
         run: echo "Build Docker image..."
 
-      # Optional: Docker-Image testen (z.B. starten und prüfen)
+      # Optional: Test Docker image (e.g., start and check)
       - name: Test Docker image
         run: echo "Test Docker image..."
