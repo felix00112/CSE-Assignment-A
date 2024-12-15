@@ -1,0 +1,37 @@
+name: CD Check Build and Run
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Install Skaffold
+      - name: Install Skaffold
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
+          chmod +x skaffold
+          sudo mv skaffold /usr/local/bin
+
+      # 3. Install Docker (if not already installed)
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Start Minikube (local Kubernetes for tests)
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@latest
+
+      # 5. Skaffold Build & Test Deployment (without Push)
+      - name: Build and Test with Skaffold
+        run: skaffold run --status-check=false --port-forward=false --tail=false
