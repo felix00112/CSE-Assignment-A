@@ -1,0 +1,57 @@
+name: CI for Wishlist Service
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Code auschecken
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Python-Umgebung einrichten
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12.0 
+
+      - name: Navigate to the directory
+        working-directory: ./src/wishlistservice
+        run: pwd
+
+      - name: Install dependencies
+        working-directory: ./src//wishlistservice
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 3. Run tests
+      - name: Run tests
+        working-directory: ./src/wishlistservice
+        run: |
+          . venv/bin/activate
+          pytest --cov --cov-report=xml
+
+      # 4. Upload results to Codecov
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # 5. Build Docker-Image
+      - name: Build Docker image
+        run: echo "Build Docker image..."
+
+      # Optional: Test Docker image (e.g., start and check)
+      - name: Test Docker image
+        run: echo "Test Docker image..."
