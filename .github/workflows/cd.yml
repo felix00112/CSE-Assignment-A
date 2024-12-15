@@ -39,4 +39,4 @@ jobs:
       - name: Verify Pods Status
         run: |
           kubectl get pods --all-namespaces
-          kubectl wait --for=condition=Ready pods --all --timeout=60s
+          kubectl wait --for=condition=Ready pods --all --timeout=900s
