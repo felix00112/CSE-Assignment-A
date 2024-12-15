@@ -260,3 +260,42 @@ message Ad {
     // short advertisement text to display.
     string text = 2;
 }
+
+// ------------Wishlist service------------------
+
+service WishlistService {
+  rpc AddWishlist(AddWishlistRequest) returns (Empty) {}
+  rpc AddItem(AddToWishlistRequest) returns (Empty);
+  rpc GetWishlist(GetWishlistRequest) returns (Empty) {}
+  rpc EmptyWishlist(EmptyWishlistRequest) returns (Empty) {}
+}
+
+message WishlistItem {
+    string product_id = 1;
+}
+
+message Wishlist {
+    string user_id = 1;
+    repeated WishlistItem items = 2;
+}
+
+message AddWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+}
+
+message AddToWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+    WishlistItem item = 3;
+}
+
+message EmptyWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+}
+
+message GetWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+}

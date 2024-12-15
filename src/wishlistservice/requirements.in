@@ -1,0 +1,9 @@
+# list of packages that need to be installed
+grpcio
+grpcio-tools
+grpcio-health-checking
+redis
+python-json-logger
+opentelemetry-distro
+opentelemetry-instrumentation-grpc
+opentelemetry-exporter-otlp-proto-grpc
