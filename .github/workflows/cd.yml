@@ -35,3 +35,8 @@ jobs:
       # 5. Skaffold Build & Test Deployment (without Push)
       - name: Build and Test with Skaffold
         run: skaffold run --status-check=false --port-forward=false --tail=false
+
+      - name: Verify Pods Status
+        run: |
+          kubectl get pods --all-namespaces
+          kubectl wait --for=condition=Ready pods --all --timeout=60s
