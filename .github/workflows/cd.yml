@@ -1,0 +1,58 @@
+name: CD Check Build and Run
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Install Skaffold
+      - name: Install Skaffold
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
+          chmod +x skaffold
+          sudo mv skaffold /usr/local/bin
+
+      # 3. Install Docker (if not already installed)
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Start Minikube (local Kubernetes for tests)
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@latest
+
+      # 5. Skaffold Build & Test Deployment (without Push)
+      - name: Build and Test with Skaffold
+        run: skaffold run --status-check=false --port-forward=false --tail=false
+
+      # - name: Wait for Pods to be Ready
+      #   run: |
+      #     kubectl wait --for=condition=Ready pods --all --timeout=900s || echo "Timeout reached, proceeding with debugging."
+
+      # - name: Describe Failing Pods
+      #   run: |
+      #     echo "Describing non-ready pods:"
+      #     for pod in $(kubectl get pods --field-selector=status.phase!=Running -o name); do
+      #       echo "Details for $pod"
+      #       kubectl describe $pod
+      #     done
+
+      # - name: Logs for Failing Pods
+      #   run: |
+      #     echo "Fetching logs for non-ready pods:"
+      #     for pod in $(kubectl get pods --field-selector=status.phase!=Running -o name); do
+      #       echo "Logs for $pod"
+      #       kubectl logs $pod || echo "No logs available for $pod"
+      #     done
+
