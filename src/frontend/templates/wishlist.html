@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Name}} - Wishlist</title>
+</head>
+<body>
+    <h1>{{.Name}}</h1>
+    {{range .Items}}
+        <div class="product">
+            <h2>{{.Name}}</h2>
+            <p>Price: {{.Price}}</p>
+            <button onclick="removeFromWishlist('{{.ID}}', '{{$.Name}}')">Remove</button>
+        </div>
+    {{else}}
+        <p>Your wishlist is empty!</p>
+    {{end}}
+    <a href="/">Back to Home</a>
+
+    <script>
+        function removeFromWishlist(productId, wishlistName) {
+            fetch("/remove_from_wishlist", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `product_id=${productId}&wishlist_name=${wishlistName}`
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert("Failed to remove product from wishlist.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

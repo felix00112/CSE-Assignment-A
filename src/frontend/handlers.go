@@ -35,6 +35,7 @@ import (
 	pb "github.com/GoogleCloudPlatform/microservices-demo/src/frontend/genproto"
 	"github.com/GoogleCloudPlatform/microservices-demo/src/frontend/money"
 	"github.com/GoogleCloudPlatform/microservices-demo/src/frontend/validator"
+	"github.com/go-redis/redis/v8"
 )
 
 type platformDetails struct {
@@ -52,7 +53,20 @@ var (
 			"renderCurrencyLogo": renderCurrencyLogo,
 		}).ParseGlob("templates/*.html"))
 	plat platformDetails
+	rdb  = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379", // Cambia esto si Redis está en otra dirección o puerto
+		Password: "",               // Agrega la contraseña si tu Redis la requiere
+		DB:       0,                // Base de datos a usar (0 por defecto)
+	})
 )
+
+func init() {
+	_, err := rdb.Ping(context.Background()).Result()
+	if err != nil {
+		panic(fmt.Sprintf("No se pudo conectar a Redis: %v", err))
+	}
+	fmt.Println("Conexión a Redis exitosa")
+}
 
 var validEnvs = []string{"local", "gcp", "azure", "aws", "onprem", "alibaba"}
 
@@ -60,6 +74,7 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
 	log.WithField("currency", currentCurrency(r)).Info("home")
 	currencies, err := fe.getCurrencies(r.Context())
+
 	if err != nil {
 		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve currencies"), http.StatusInternalServerError)
 		return
@@ -74,10 +89,37 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve cart"), http.StatusInternalServerError)
 		return
 	}
+	// Obtener todas las wishlists y combinarlas (GET all wishlists)
+	sessionID := sessionID(r)
+	ctx := r.Context()
+	keys, err := rdb.Keys(ctx, fmt.Sprintf("wishlist:%s:*", sessionID)).Result()
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to retrieve wishlists"), http.StatusInternalServerError)
+		return
+	}
+	//añadido
+	log.Infof("Wishlists retrieved: %+v", keys)
+
+	wishlistMap := make(map[string]bool)
+	for _, key := range keys {
+		parts := strings.Split(key, ":")
+		if len(parts) > 2 {
+			wishlistName := parts[2]
+			wishlistProducts, err := fe.getWishlist(ctx, sessionID, wishlistName)
+			if err != nil {
+				log.WithError(err).Warnf("Failed to retrieve wishlist: %s", wishlistName)
+				continue
+			}
+			for _, product := range wishlistProducts {
+				wishlistMap[product.GetId()] = true
+			}
+		}
+	}
 
 	type productView struct {
-		Item  *pb.Product
-		Price *pb.Money
+		Item       *pb.Product
+		Price      *pb.Money
+		InWishlist bool // Indicar si está en alguna wishlist (boolean to see if it is already in a wishlist)
 	}
 	ps := make([]productView, len(products))
 	for i, p := range products {
@@ -86,7 +128,7 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 			renderHTTPError(log, r, w, errors.Wrapf(err, "failed to do currency conversion for product %s", p.GetId()), http.StatusInternalServerError)
 			return
 		}
-		ps[i] = productView{p, price}
+		ps[i] = productView{p, price, wishlistMap[p.GetId()]}
 	}
 
 	// Set ENV_PLATFORM (default to local if not set; use env var if set; otherwise detect GCP, which overrides env)_
@@ -114,11 +156,184 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 		"cart_size":     cartSize(cart),
 		"banner_color":  os.Getenv("BANNER_COLOR"), // illustrates canary deployments
 		"ad":            fe.chooseAd(r.Context(), []string{}, log),
+		"wishlists":     keys, // Pasar las wishlists al contexto
 	})); err != nil {
 		log.Error(err)
 	}
 }
 
+// New funcs for wishlists
+// / Crear una nueva wishlist (CREATE new wishlist)
+func (fe *frontendServer) createWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	wishlistName := r.FormValue("wishlist_name")
+	sessionID := sessionID(r)
+	ctx := r.Context()
+
+	if wishlistName == "" {
+		http.Error(w, "Wishlist name is required", http.StatusBadRequest)
+		return
+	}
+
+	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
+	// Validar si ya existe
+	exists, err := rdb.Exists(ctx, key).Result()
+	if err != nil {
+		http.Error(w, "Error checking wishlist existence", http.StatusInternalServerError)
+		return
+	}
+	if exists > 0 {
+		http.Error(w, "Wishlist already exists", http.StatusConflict)
+		return
+	}
+
+	// Crear la wishlist
+	err = rdb.SAdd(ctx, key, "").Err()
+	if err != nil {
+		http.Error(w, "Error creating wishlist", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Wishlist '%s' created successfully", wishlistName)
+}
+
+// Listar todas las wishlists (LIST all wishlists)
+func (fe *frontendServer) listWishlistsHandler(w http.ResponseWriter, r *http.Request) {
+	sessionID := sessionID(r)
+	ctx := r.Context()
+
+	keys, err := rdb.Keys(ctx, fmt.Sprintf("wishlist:%s:*", sessionID)).Result()
+	if err != nil {
+		http.Error(w, "Error retrieving wishlists", http.StatusInternalServerError)
+		return
+	}
+
+	wishlistNames := []string{}
+	for _, key := range keys {
+		parts := strings.Split(key, ":")
+		if len(parts) > 2 {
+			wishlistNames = append(wishlistNames, parts[2])
+		}
+	}
+
+	json.NewEncoder(w).Encode(wishlistNames)
+}
+
+// Agregar un producto a una wishlist
+func (fe *frontendServer) addToWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	wishlistName := r.FormValue("wishlist_name")
+	productID := r.FormValue("product_id")
+	sessionID := sessionID(r)
+	ctx := r.Context()
+
+	if wishlistName == "" || productID == "" {
+		http.Error(w, "Wishlist name and product ID are required", http.StatusBadRequest)
+		return
+	}
+
+	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
+	err := rdb.SAdd(ctx, key, productID).Err()
+	if err != nil {
+		http.Error(w, "Error adding product to wishlist", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Product '%s' added to wishlist '%s'", productID, wishlistName)
+}
+
+// Eliminar un producto de una wishlist (ELIMINATE product from a wishlist)
+func (fe *frontendServer) removeFromWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	wishlistName := r.FormValue("wishlist_name")
+	productID := r.FormValue("product_id")
+	sessionID := sessionID(r)
+	ctx := r.Context()
+
+	if wishlistName == "" || productID == "" {
+		http.Error(w, "Wishlist name and product ID are required", http.StatusBadRequest)
+		return
+	}
+
+	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
+	err := rdb.SRem(ctx, key, productID).Err()
+	if err != nil {
+		http.Error(w, "Error removing product from wishlist", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Product '%s' removed from wishlist '%s'", productID, wishlistName)
+}
+
+// Ver los productos de una wishlist específica (View products from specific wishlist)
+func (fe *frontendServer) viewWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	wishlistName := r.URL.Query().Get("wishlist_name")
+	sessionID := sessionID(r)
+	ctx := r.Context()
+
+	if wishlistName == "" {
+		http.Error(w, "Wishlist name is required", http.StatusBadRequest)
+		return
+	}
+
+	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
+	productIDs, err := rdb.SMembers(ctx, key).Result()
+	if err != nil {
+		http.Error(w, "Error retrieving products from wishlist", http.StatusInternalServerError)
+		return
+	}
+
+	products := []*pb.Product{}
+	for _, id := range productIDs {
+		if id == "" {
+			continue
+		}
+		product, err := fe.getProduct(ctx, id)
+		if err != nil {
+			http.Error(w, "Error fetching product details", http.StatusInternalServerError)
+			return
+		}
+		products = append(products, product)
+	}
+
+	if err := templates.ExecuteTemplate(w, "wishlist", map[string]interface{}{
+		"wishlist_name": wishlistName,
+		"products":      products,
+	}); err != nil {
+		http.Error(w, "Error rendering wishlist page", http.StatusInternalServerError)
+	}
+}
+func (fe *frontendServer) getWishlist(ctx context.Context, sessionID, wishlistName string) ([]*pb.Product, error) {
+	if wishlistName == "" {
+		return nil, errors.New("wishlist name is required")
+	}
+
+	// Construir la clave de Redis para la wishlist (Redis for wishlist)
+	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
+
+	// Obtener los IDs de productos desde Redis (Get product ids from redis)
+	productIDs, err := rdb.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convertir los IDs de productos en detalles de productos
+	products := []*pb.Product{}
+	for _, id := range productIDs {
+		if id == "" {
+			continue // Ignorar entradas vacías
+		}
+		product, err := fe.getProduct(ctx, id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to fetch product details for ID %s", id)
+		}
+		products = append(products, product)
+	}
+
+	return products, nil
+}
+
+// End of new implementations for wishlist
 func (plat *platformDetails) setPlatformDetails(env string) {
 	if env == "aws" {
 		plat.provider = "AWS"
@@ -232,7 +447,7 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to cart"), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("location", baseUrl + "/cart")
+	w.Header().Set("location", baseUrl+"/cart")
 	w.WriteHeader(http.StatusFound)
 }
 
@@ -244,7 +459,7 @@ func (fe *frontendServer) emptyCartHandler(w http.ResponseWriter, r *http.Reques
 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to empty cart"), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("location", baseUrl + "/")
+	w.Header().Set("location", baseUrl+"/")
 	w.WriteHeader(http.StatusFound)
 }
 
@@ -423,7 +638,7 @@ func (fe *frontendServer) logoutHandler(w http.ResponseWriter, r *http.Request) 
 		c.MaxAge = -1
 		http.SetCookie(w, c)
 	}
-	w.Header().Set("Location", baseUrl + "/")
+	w.Header().Set("Location", baseUrl+"/")
 	w.WriteHeader(http.StatusFound)
 }
 

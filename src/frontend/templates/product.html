@@ -9,7 +9,8 @@
 
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
@@ -53,6 +54,39 @@
           </div>
           {{ end }}
 
+          <!-- Wishlist actions -->
+          <div class="wishlist-actions">
+            {{ if $.wishlists }}
+            <form method="POST" action="{{ $.baseUrl }}/add_to_wishlist" style="display: inline;">
+              <input type="hidden" name="product_id" value="{{ $.product.Item.Id }}" />
+              <label for="wishlist-selector">Add to wishlist:</label>
+              <select name="wishlist_name" id="wishlist-selector">
+                {{ range $.wishlists }}
+                <option value="{{ .Name }}">{{ .Name }}</option>
+                {{ end }}
+              </select>
+              <button type="submit" class="cymbal-button-primary">Add</button>
+            </form>
+            {{ else }}
+            <p>No wishlists available. Please create one first!</p>
+            {{ end }}
+
+            <!-- Add dynamic wishlist button -->
+            <div class="dynamic-wishlist-button" style="margin-top: 20px;">
+              <div class="container">
+                <!-- Botón principal -->
+                <button class="wishlist-toggle-button">
+                  ♥ Add to Wishlist
+                </button>
+
+                <!-- Dropdown -->
+                <div class="dropdown">
+                  <div class="dropdown-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <form method="POST" action="{{ $.baseUrl }}/cart">
             <input type="hidden" name="product_id" value="{{$.product.Item.Id}}" />
             <div class="product-quantity-dropdown">
@@ -74,13 +108,74 @@
   </div>
   <div>
     {{ if $.recommendations}}
-      {{ template "recommendations" $ }}
+    {{ template "recommendations" $ }}
     {{ end }}
   </div>
   <div class="ad">
-   {{ if $.ad }}{{ template "text_ad" $ }}{{ end }}
+    {{ if $.ad }}{{ template "text_ad" $ }}{{ end }}
   </div>
 
 </main>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleButton = document.querySelector(".wishlist-toggle-button");
+    const dropdown = document.querySelector(".dropdown");
+    const dropdownList = document.querySelector(".dropdown-list");
+
+    // Recuperar las wishlists desde localStorage
+    const wishlists = JSON.parse(localStorage.getItem("wishlists")) || ["My Wishlist"];
+    const selectedWishlists = new Set();
+
+    // Función para llenar el desplegable dinámicamente
+    function populateDropdown() {
+      dropdownList.innerHTML = ""; // Limpiar lista anterior
+      wishlists.forEach(wishlist => {
+        const item = document.createElement("div");
+        item.className = "dropdown-item";
+        item.innerHTML = `
+          <span>${wishlist}</span>
+          <button class="toggle-button">${selectedWishlists.has(wishlist) ? "−" : "+"}</button>
+        `;
+
+        // Manejar el botón +/−
+        const button = item.querySelector(".toggle-button");
+        button.addEventListener("click", () => {
+          if (selectedWishlists.has(wishlist)) {
+            selectedWishlists.delete(wishlist);
+            button.textContent = "+";
+          } else {
+            selectedWishlists.add(wishlist);
+            button.textContent = "−";
+          }
+          updateMainButton();
+        });
+
+        dropdownList.appendChild(item);
+      });
+    }
+
+    // Actualizar el texto del botón principal
+    function updateMainButton() {
+      if (selectedWishlists.size > 0) {
+        toggleButton.innerHTML = "- Remove from Wishlist";
+      } else {
+        toggleButton.innerHTML = "♥ Add to Wishlist";
+      }
+    }
+
+    // Mostrar/ocultar el dropdown al hacer clic en el botón
+    toggleButton.addEventListener("click", () => {
+      dropdown.classList.toggle("active");
+      populateDropdown();
+    });
+
+    // Cerrar el dropdown si se hace clic fuera
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target) && e.target !== toggleButton) {
+        dropdown.classList.remove("active");
+      }
+    });
+  });
+</script>
 {{ template "footer" . }}
 {{ end }}

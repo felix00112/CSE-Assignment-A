@@ -1,80 +1,182 @@
-<!--
- Copyright 2020 Google LLC
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
 {{ define "home" }}
 
 {{ template "header" . }}
 <div {{ with $.platform_css }} class="{{.}}" {{ end }}>
-  <span class="platform-flag">
-    {{$.platform_name}}
-  </span>
+  <span class="platform-flag">{{$.platform_name}}</span>
 </div>
+
 <main role="main" class="home">
-
-  <!-- The image at the top of the home page, displayed on smaller screens. -->
-  <div class="home-mobile-hero-banner d-lg-none"></div>
-
-  <div class="container-fluid">
-    <div class="row">
-
-      <!-- The image on the left of the home page, displayed on larger screens. -->
-      <!--<div class="col-4 d-none d-lg-block home-desktop-left-image"></div>-->
-      <!-- @TODO: removed temporarily. When uncommenting, also replace below div with this -->
-      <!--<div class="col-12 col-lg-8">-->
-
-      <div class="col-12 col-lg-12 px-10-percent">
-
-        <div class="row hot-products-row px-xl-6">
-
-          <div class="col-12">
-            <h3>Hot Products</h3>
-          </div>
-
-          {{ range $.products }}
-          <div class="col-md-4 hot-product-card">
-            <a href="{{ $.baseUrl }}/product/{{.Item.Id}}">
-              <img loading="lazy" src="{{ $.baseUrl }}{{.Item.Picture}}">
-              <div class="hot-product-card-img-overlay"></div>
-            </a>
-            <div>
-              <div class="hot-product-card-name">{{ .Item.Name }}</div>
-              <div class="hot-product-card-price">{{ renderMoney .Price }}</div>
-            </div>
-          </div>
-          {{ end }}
-
-        </div>
-
-        <!-- Footer for larger screens. -->
-        <div class="row d-none d-lg-block home-desktop-footer-row">
-          <div class="col-12 p-0">
-            {{ template "footer" . }}
-          </div>
-        </div>
-
+  <!-- Wishlist Dropdown -->
+  <div class="wishlist-container" style="margin: 20px 0;">
+    <button class="wishlist-button">
+      Wishlists
+      <div class="triangle"></div>
+    </button>
+    <div class="dropdown">
+      <div class="dropdown-header">
+        <span>Wishlists</span>
+        <button class="add-button">+</button>
       </div>
-
+      <div class="dropdown-list"></div>
     </div>
   </div>
 
+  <!-- Section for hot products -->
+  <div class="container-fluid">
+    <div class="row hot-products-row px-xl-6">
+      {{ range $.products }}
+      <div class="col-md-4 hot-product-card">
+        <a href="{{ $.baseUrl }}/product/{{.Item.Id}}">
+          <img loading="lazy" src="{{ $.baseUrl }}{{.Item.Picture}}">
+        </a>
+        <div>
+          <div class="hot-product-card-name">{{ .Item.Name }}</div>
+          <div class="hot-product-card-price">{{ renderMoney .Price }}</div>
+          <!-- Add to Wishlist Button -->
+          <div class="dynamic-wishlist-button" style="margin-top: 10px;">
+            <div class="container" style="position: relative;">
+              <button class="wishlist-toggle-button" data-product-id="{{ .Item.Id }}">
+                ♥ Add to Wishlist
+              </button>
+              <div class="dropdown">
+                <div class="dropdown-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
 </main>
 
-<!-- Footer for smaller screens. -->
-<div class="d-lg-none">
-  {{ template "footer" . }}
-</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const wishlistButton = document.querySelector(".wishlist-button");
+    const dropdown = document.querySelector(".dropdown");
+    const dropdownList = document.querySelector(".dropdown-list");
+    const addButton = document.querySelector(".add-button");
+    const toggleButtons = document.querySelectorAll(".wishlist-toggle-button");
 
+    let wishlists = JSON.parse(localStorage.getItem("wishlists")) || ["My Wishlist"];
+    let productWishlists = JSON.parse(localStorage.getItem("productWishlists")) || {};
+
+    // Wishlist Dropdown Logic
+    function renderDropdown() {
+      dropdownList.innerHTML = "";
+      wishlists.forEach(name => {
+        const item = document.createElement("div");
+        item.className = "dropdown-item";
+        item.innerHTML = `
+          <span>${name}</span>
+          ${name !== "My Wishlist" ? `
+            <button class="menu-button">⋮</button>
+            <div class="menu-options">
+              <div class="menu-rename">Rename</div>
+              <div class="menu-delete">Delete</div>
+            </div>` : ''}
+        `;
+        attachMenuEvents(item, name);
+        dropdownList.appendChild(item);
+      });
+    }
+
+    function attachMenuEvents(item, name) {
+      const menuButton = item.querySelector(".menu-button");
+      const menuOptions = item.querySelector(".menu-options");
+
+      menuButton?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menuOptions.classList.toggle("active");
+      });
+
+      menuOptions?.querySelector(".menu-rename")?.addEventListener("click", () => {
+        const newName = prompt("Rename wishlist:", name);
+        if (newName && !wishlists.includes(newName)) {
+          wishlists[wishlists.indexOf(name)] = newName;
+          updateLocalStorage();
+          renderDropdown();
+        }
+      });
+
+      menuOptions?.querySelector(".menu-delete")?.addEventListener("click", () => {
+        if (confirm(`Delete wishlist "${name}"?`)) {
+          wishlists = wishlists.filter(w => w !== name);
+          updateLocalStorage();
+          renderDropdown();
+        }
+      });
+    }
+
+    function updateLocalStorage() {
+      localStorage.setItem("wishlists", JSON.stringify(wishlists));
+      localStorage.setItem("productWishlists", JSON.stringify(productWishlists));
+    }
+
+    wishlistButton.addEventListener("click", () => {
+      dropdown.classList.toggle("active");
+      renderDropdown();
+    });
+
+    addButton.addEventListener("click", () => {
+      const newWishlist = prompt("Enter a new wishlist name:");
+      if (newWishlist && !wishlists.includes(newWishlist)) {
+        wishlists.push(newWishlist);
+        updateLocalStorage();
+        renderDropdown();
+      }
+    });
+
+    // Add to Wishlist Logic
+    toggleButtons.forEach(button => {
+      const productId = button.dataset.productId;
+      button.addEventListener("click", () => {
+        const dropdown = button.nextElementSibling;
+        dropdown.classList.toggle("active");
+        populateProductDropdown(dropdown, productId, button);
+      });
+
+      // Check initial state of the button
+      updateButtonState(productId, button);
+    });
+
+    function populateProductDropdown(dropdown, productId, button) {
+      dropdown.innerHTML = "";
+      wishlists.forEach(wishlist => {
+        const isAdded = productWishlists[productId]?.includes(wishlist) || false;
+        const item = document.createElement("div");
+        item.className = "dropdown-item";
+        item.innerHTML = `
+          <span>${wishlist}</span>
+          <button class="toggle-button">${isAdded ? "−" : "+"}</button>
+        `;
+
+        const toggleButton = item.querySelector(".toggle-button");
+        toggleButton.addEventListener("click", () => {
+          productWishlists[productId] = productWishlists[productId] || [];
+          if (isAdded) {
+            productWishlists[productId] = productWishlists[productId].filter(w => w !== wishlist);
+            toggleButton.textContent = "+";
+          } else {
+            productWishlists[productId].push(wishlist);
+            toggleButton.textContent = "−";
+          }
+          updateLocalStorage();
+          updateButtonState(productId, button);
+        });
+
+        dropdown.appendChild(item);
+      });
+    }
+
+    function updateButtonState(productId, button) {
+      const isAdded = productWishlists[productId]?.length > 0;
+      button.textContent = isAdded ? "- Remove from Wishlist" : "♥ Add to Wishlist";
+    }
+
+    renderDropdown();
+  });
+</script>
+
+{{ template "footer" . }}
 {{ end }}
