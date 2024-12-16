@@ -147,6 +147,8 @@ spec:
             value: "currencyservice:7000"
           - name: CART_SERVICE_ADDR
             value: "cartservice:7070"
+          - name: WISHLIST_SERVICE_ADDR
+            value: "wishlistservice:50052"
           resources:
             requests:
               cpu: 100m
@@ -322,6 +324,8 @@ spec:
             value: "adservice:9555"
           - name: SHOPPING_ASSISTANT_SERVICE_ADDR
             value: "shoppingassistantservice:80"
+          - name: WISHLIST_SERVICE_ADDR
+            value: "wishlistservice:50052"
           # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
           # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
           # - name: ENV_PLATFORM
