@@ -74,7 +74,7 @@
             <!-- Add dynamic wishlist button -->
             <div class="dynamic-wishlist-button" style="margin-top: 20px;">
               <div class="container">
-                <!-- Botón principal -->
+                <!-- (Main button)Botón principal -->
                 <button class="wishlist-toggle-button">
                   ♥ Add to Wishlist
                 </button>
@@ -122,13 +122,13 @@
     const dropdown = document.querySelector(".dropdown");
     const dropdownList = document.querySelector(".dropdown-list");
 
-    // Recuperar las wishlists desde localStorage
+    // (Get wishlist from localStorage) Recuperar las wishlists desde localStorage
     const wishlists = JSON.parse(localStorage.getItem("wishlists")) || ["My Wishlist"];
     const selectedWishlists = new Set();
 
-    // Función para llenar el desplegable dinámicamente
+    // (Function to fill dropdown that displays when you click wishlists button dinamically) Función para llenar el desplegable dinámicamente
     function populateDropdown() {
-      dropdownList.innerHTML = ""; // Limpiar lista anterior
+      dropdownList.innerHTML = ""; // (Clean previous wishlist) Limpiar lista anterior
       wishlists.forEach(wishlist => {
         const item = document.createElement("div");
         item.className = "dropdown-item";
@@ -137,7 +137,7 @@
           <button class="toggle-button">${selectedWishlists.has(wishlist) ? "−" : "+"}</button>
         `;
 
-        // Manejar el botón +/−
+        // (Handle +/- button) Manejar el botón +/−
         const button = item.querySelector(".toggle-button");
         button.addEventListener("click", () => {
           if (selectedWishlists.has(wishlist)) {
@@ -154,7 +154,7 @@
       });
     }
 
-    // Actualizar el texto del botón principal
+    // (Change text of the button) Actualizar el texto del botón principal
     function updateMainButton() {
       if (selectedWishlists.size > 0) {
         toggleButton.innerHTML = "- Remove from Wishlist";
@@ -163,13 +163,13 @@
       }
     }
 
-    // Mostrar/ocultar el dropdown al hacer clic en el botón
+    // (Show/Hide dropdown when clicking the button) Mostrar/ocultar el dropdown al hacer clic en el botón
     toggleButton.addEventListener("click", () => {
       dropdown.classList.toggle("active");
       populateDropdown();
     });
 
-    // Cerrar el dropdown si se hace clic fuera
+    // (Close dropdown if you click outside) Cerrar el dropdown si se hace clic fuera
     document.addEventListener("click", (e) => {
       if (!dropdown.contains(e.target) && e.target !== toggleButton) {
         dropdown.classList.remove("active");

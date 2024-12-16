@@ -54,18 +54,18 @@ var (
 		}).ParseGlob("templates/*.html"))
 	plat platformDetails
 	rdb  = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Cambia esto si Redis está en otra dirección o puerto
-		Password: "",               // Agrega la contraseña si tu Redis la requiere
-		DB:       0,                // Base de datos a usar (0 por defecto)
+		Addr:     "localhost:6379", // (Change according to redis address) Cambiar esto si Redis está en otra dirección o puerto
+		Password: "",               // (ADD password if required by redis) Agrega la contraseña si Redis la requiere
+		DB:       0,                // (Data base being used, 0 means the default one) Base de datos a usar (0 por defecto)
 	})
 )
 
 func init() {
 	_, err := rdb.Ping(context.Background()).Result()
 	if err != nil {
-		panic(fmt.Sprintf("No se pudo conectar a Redis: %v", err))
+		panic(fmt.Sprintf("Could not connect to Redis: %v", err))
 	}
-	fmt.Println("Conexión a Redis exitosa")
+	fmt.Println("Redis connection successful")
 }
 
 var validEnvs = []string{"local", "gcp", "azure", "aws", "onprem", "alibaba"}
@@ -97,7 +97,7 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to retrieve wishlists"), http.StatusInternalServerError)
 		return
 	}
-	//añadido
+	//añadido (Added)
 	log.Infof("Wishlists retrieved: %+v", keys)
 
 	wishlistMap := make(map[string]bool)
@@ -119,7 +119,7 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	type productView struct {
 		Item       *pb.Product
 		Price      *pb.Money
-		InWishlist bool // Indicar si está en alguna wishlist (boolean to see if it is already in a wishlist)
+		InWishlist bool // (boolean to see if it is already in a wishlist) Indicar si está en alguna wishlist
 	}
 	ps := make([]productView, len(products))
 	for i, p := range products {
@@ -156,14 +156,14 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 		"cart_size":     cartSize(cart),
 		"banner_color":  os.Getenv("BANNER_COLOR"), // illustrates canary deployments
 		"ad":            fe.chooseAd(r.Context(), []string{}, log),
-		"wishlists":     keys, // Pasar las wishlists al contexto
+		"wishlists":     keys, // (Putting wishlists into context) Pasar las wishlists al contexto
 	})); err != nil {
 		log.Error(err)
 	}
 }
 
 // New funcs for wishlists
-// / Crear una nueva wishlist (CREATE new wishlist)
+// (CREATE new wishlist) Crear una nueva wishlist
 func (fe *frontendServer) createWishlistHandler(w http.ResponseWriter, r *http.Request) {
 	wishlistName := r.FormValue("wishlist_name")
 	sessionID := sessionID(r)
@@ -175,7 +175,7 @@ func (fe *frontendServer) createWishlistHandler(w http.ResponseWriter, r *http.R
 	}
 
 	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
-	// Validar si ya existe
+	//(Check if it already exists) Validar si ya existe
 	exists, err := rdb.Exists(ctx, key).Result()
 	if err != nil {
 		http.Error(w, "Error checking wishlist existence", http.StatusInternalServerError)
@@ -186,7 +186,7 @@ func (fe *frontendServer) createWishlistHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Crear la wishlist
+	// (Create the wishlist) Crear la wishlist
 	err = rdb.SAdd(ctx, key, "").Err()
 	if err != nil {
 		http.Error(w, "Error creating wishlist", http.StatusInternalServerError)
@@ -197,7 +197,7 @@ func (fe *frontendServer) createWishlistHandler(w http.ResponseWriter, r *http.R
 	fmt.Fprintf(w, "Wishlist '%s' created successfully", wishlistName)
 }
 
-// Listar todas las wishlists (LIST all wishlists)
+// (LIST all wishlists) Listar todas las wishlists
 func (fe *frontendServer) listWishlistsHandler(w http.ResponseWriter, r *http.Request) {
 	sessionID := sessionID(r)
 	ctx := r.Context()
@@ -219,7 +219,7 @@ func (fe *frontendServer) listWishlistsHandler(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(wishlistNames)
 }
 
-// Agregar un producto a una wishlist
+// (ADD a product to the wishlist) Agregar un producto a una wishlist
 func (fe *frontendServer) addToWishlistHandler(w http.ResponseWriter, r *http.Request) {
 	wishlistName := r.FormValue("wishlist_name")
 	productID := r.FormValue("product_id")
@@ -242,7 +242,7 @@ func (fe *frontendServer) addToWishlistHandler(w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, "Product '%s' added to wishlist '%s'", productID, wishlistName)
 }
 
-// Eliminar un producto de una wishlist (ELIMINATE product from a wishlist)
+// (ELIMINATE product from a wishlist) Eliminar un producto de una wishlist
 func (fe *frontendServer) removeFromWishlistHandler(w http.ResponseWriter, r *http.Request) {
 	wishlistName := r.FormValue("wishlist_name")
 	productID := r.FormValue("product_id")
@@ -265,7 +265,7 @@ func (fe *frontendServer) removeFromWishlistHandler(w http.ResponseWriter, r *ht
 	fmt.Fprintf(w, "Product '%s' removed from wishlist '%s'", productID, wishlistName)
 }
 
-// Ver los productos de una wishlist específica (View products from specific wishlist)
+// (View products from specific wishlist) Ver los productos de una wishlist específica
 func (fe *frontendServer) viewWishlistHandler(w http.ResponseWriter, r *http.Request) {
 	wishlistName := r.URL.Query().Get("wishlist_name")
 	sessionID := sessionID(r)
@@ -308,20 +308,20 @@ func (fe *frontendServer) getWishlist(ctx context.Context, sessionID, wishlistNa
 		return nil, errors.New("wishlist name is required")
 	}
 
-	// Construir la clave de Redis para la wishlist (Redis for wishlist)
+	// (Building the Redis key for the wishlist) Construir la clave de Redis para la wishlist
 	key := fmt.Sprintf("wishlist:%s:%s", sessionID, wishlistName)
 
-	// Obtener los IDs de productos desde Redis (Get product ids from redis)
+	// (Get product ids from redis) Obtener los IDs de productos desde Redis
 	productIDs, err := rdb.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	// Convertir los IDs de productos en detalles de productos
+	// (Convert product IDs to product details) Convertir los IDs de productos en detalles de productos
 	products := []*pb.Product{}
 	for _, id := range productIDs {
 		if id == "" {
-			continue // Ignorar entradas vacías
+			continue // (Ignore empty entries) Ignorar entradas vacías
 		}
 		product, err := fe.getProduct(ctx, id)
 		if err != nil {
