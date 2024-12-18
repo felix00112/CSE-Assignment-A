@@ -54,8 +54,11 @@ jobs:
 
       # 5. Build Docker-Image
       - name: Build Docker image
-        run: echo "Build Docker image..."
+        run: docker build -t wishlist_service:latest .
 
       # Optional: Test Docker image (e.g., start and check)
       - name: Test Docker image
-        run: echo "Test Docker image..."
+        run: |
+          docker run --rm -d --name test-container wishlist_service:latest
+          docker ps | grep test-container  # Check if the container is running
+          docker stop test-container
