@@ -40,7 +40,7 @@ jobs:
         working-directory: ./src/wishlistservice
         run: |
           . venv/bin/activate
-          pytest --cov --cov-report=xml
+          pytest --cov=src --cov-report=xml
 
       # 4. Upload results to Codecov
       - name: Upload results to Codecov

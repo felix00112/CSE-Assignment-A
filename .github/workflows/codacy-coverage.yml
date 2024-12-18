@@ -34,7 +34,7 @@ jobs:
         working-directory: ./src/wishlistservice
         run: |
           . venv/bin/activate
-          pytest --cov --cov-report=xml
+          pytest --cov=src --cov-report=xml
 
       - name: Run codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
