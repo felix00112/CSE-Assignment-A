@@ -265,18 +265,24 @@ message Ad {
 
 service WishlistService {
   rpc AddWishlist(AddWishlistRequest) returns (Empty) {}
-  rpc AddItem(AddToWishlistRequest) returns (Empty);
-  rpc GetWishlist(GetWishlistRequest) returns (Empty) {}
+  rpc AddItem(AddToWishlistRequest) returns (Empty) {}
+  rpc GetWishlist(GetWishlistRequest) returns (GetWishlistResponse) {}
+  rpc GetAllWishlists(GetAllWishlistsRequest) returns (GetAllWishlistsResponse) {}
+  rpc RemoveItem(RemoveFromWishlistRequest) returns (Empty) {}
   rpc EmptyWishlist(EmptyWishlistRequest) returns (Empty) {}
+  rpc DeleteWishlist(DeleteWishlistRequest) returns (Empty) {}
+  rpc RenameWishlist(RenameWishlistRequest) returns (Empty) {}
+  rpc MoveWishlistItem(MoveWishlistItemRequest) returns (Empty) {}
+  // copy is also supported but uses addItem since the underlying logic would be the same
+}
+
+message Wishlist {
+    string name = 1;
+    repeated WishlistItem items = 2;
 }
 
 message WishlistItem {
     string product_id = 1;
-}
-
-message Wishlist {
-    string user_id = 1;
-    repeated WishlistItem items = 2;
 }
 
 message AddWishlistRequest {
@@ -290,12 +296,48 @@ message AddToWishlistRequest {
     WishlistItem item = 3;
 }
 
+message GetWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+}
+
+message GetWishlistResponse {
+    Wishlist wishlist = 1;
+}
+
+message GetAllWishlistsRequest {
+    string user_id = 1;
+}
+
+message GetAllWishlistsResponse {
+    repeated Wishlist wishlists = 1;
+}
+
 message EmptyWishlistRequest {
     string user_id = 1;
     string name = 2;
 }
 
-message GetWishlistRequest {
+message RemoveFromWishlistRequest {
     string user_id = 1;
     string name = 2;
+    WishlistItem item = 3;
+}
+
+message DeleteWishlistRequest {
+    string user_id = 1;
+    string name = 2;
+}
+
+message RenameWishlistRequest {
+    string user_id = 1;
+    string old_name = 2;
+    string new_name = 3;
+}
+
+message MoveWishlistItemRequest {
+    string user_id = 1;
+    string source_wishlist_name = 2;
+    string target_wishlist_name = 3;
+    WishlistItem item = 4;
 }

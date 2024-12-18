@@ -125,3 +125,41 @@ func (fe *frontendServer) getAd(ctx context.Context, ctxKeys []string) ([]*pb.Ad
 	})
 	return resp.GetAds(), errors.Wrap(err, "failed to get ads")
 }
+
+// func (fe *frontendServer) getWishlist(ctx context.Context, userID, wishlistName string) ([]*pb.WishlistItem, error) {
+//     resp, err := pb.NewWishlistServiceClient(fe.wishlistSvcConn).GetWishlist(ctx, &pb.GetWishlistRequest{
+//         UserId: userID,
+//         Name:   wishlistName,
+//     })
+//     if err != nil {
+//         return nil, err
+//     }
+//     return resp.GetItems(), nil
+// }
+
+// func (fe *frontendServer) addWishlist(ctx context.Context, userID, wishlistName string) error {
+//     _, err := pb.NewWishlistServiceClient(fe.wishlistSvcConn).AddWishlist(ctx, &pb.AddWishlistRequest{
+//         UserId: userID,
+//         Name:   wishlistName,
+//     })
+//     return err
+// }
+
+func (fe *frontendServer) addItemToWishlist(ctx context.Context, userID string, wishlistName string, productID string) error {
+    _, err := pb.NewWishlistServiceClient(fe.wishlistSvcConn).AddItem(ctx, &pb.AddToWishlistRequest{
+        UserId: userID,
+        Name:   wishlistName,
+        Item: &pb.WishlistItem{
+            ProductId: productID,
+        },
+    })
+    return err
+}
+
+// func (fe *frontendServer) emptyWishlist(ctx context.Context, userID, wishlistName string) error {
+//     _, err := pb.NewWishlistServiceClient(fe.wishlistSvcConn).EmptyWishlist(ctx, &pb.EmptyWishlistRequest{
+//         UserId: userID,
+//         Name:   wishlistName,
+//     })
+//     return err
+// }

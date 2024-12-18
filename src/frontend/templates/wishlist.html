@@ -1,0 +1,31 @@
+{{ define "wishlist" }}
+    {{ template "header" . }}
+
+    <div {{ with $.platform_css }} class="{{.}}" {{ end }}>
+        <span class="platform-flag">
+            {{$.platform_name}}
+        </span>
+    </div>
+
+    <main role="main" class="wishlist-sections">
+        <section class="container">
+            <div class="row">
+
+                <div class="col-lg-6 col-xl-5 offset-xl-1 wishlist-summary-section">
+
+                    <div class="row mb-3 py-2">
+                        <div class="col-8 pr-md-0 text-right">
+                            <form method="POST" action="{{ $.baseUrl }}/wishlist">
+                                <button class="cymbal-button-secondary wishlist-summary-add-item-button" type="submit">
+                                    Add Item
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {{ template "footer" . }}
+{{ end }}

@@ -1009,11 +1009,36 @@ class WishlistServiceStub(object):
         self.GetWishlist = channel.unary_unary(
                 '/hipstershop.WishlistService/GetWishlist',
                 request_serializer=demo__pb2.GetWishlistRequest.SerializeToString,
+                response_deserializer=demo__pb2.GetWishlistResponse.FromString,
+                _registered_method=True)
+        self.GetAllWishlists = channel.unary_unary(
+                '/hipstershop.WishlistService/GetAllWishlists',
+                request_serializer=demo__pb2.GetAllWishlistsRequest.SerializeToString,
+                response_deserializer=demo__pb2.GetAllWishlistsResponse.FromString,
+                _registered_method=True)
+        self.RemoveItem = channel.unary_unary(
+                '/hipstershop.WishlistService/RemoveItem',
+                request_serializer=demo__pb2.RemoveFromWishlistRequest.SerializeToString,
                 response_deserializer=demo__pb2.Empty.FromString,
                 _registered_method=True)
         self.EmptyWishlist = channel.unary_unary(
                 '/hipstershop.WishlistService/EmptyWishlist',
                 request_serializer=demo__pb2.EmptyWishlistRequest.SerializeToString,
+                response_deserializer=demo__pb2.Empty.FromString,
+                _registered_method=True)
+        self.DeleteWishlist = channel.unary_unary(
+                '/hipstershop.WishlistService/DeleteWishlist',
+                request_serializer=demo__pb2.DeleteWishlistRequest.SerializeToString,
+                response_deserializer=demo__pb2.Empty.FromString,
+                _registered_method=True)
+        self.RenameWishlist = channel.unary_unary(
+                '/hipstershop.WishlistService/RenameWishlist',
+                request_serializer=demo__pb2.RenameWishlistRequest.SerializeToString,
+                response_deserializer=demo__pb2.Empty.FromString,
+                _registered_method=True)
+        self.MoveWishlistItem = channel.unary_unary(
+                '/hipstershop.WishlistService/MoveWishlistItem',
+                request_serializer=demo__pb2.MoveWishlistItemRequest.SerializeToString,
                 response_deserializer=demo__pb2.Empty.FromString,
                 _registered_method=True)
 
@@ -1041,7 +1066,37 @@ class WishlistServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetAllWishlists(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveItem(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def EmptyWishlist(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteWishlist(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RenameWishlist(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MoveWishlistItem(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -1063,11 +1118,36 @@ def add_WishlistServiceServicer_to_server(servicer, server):
             'GetWishlist': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWishlist,
                     request_deserializer=demo__pb2.GetWishlistRequest.FromString,
+                    response_serializer=demo__pb2.GetWishlistResponse.SerializeToString,
+            ),
+            'GetAllWishlists': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAllWishlists,
+                    request_deserializer=demo__pb2.GetAllWishlistsRequest.FromString,
+                    response_serializer=demo__pb2.GetAllWishlistsResponse.SerializeToString,
+            ),
+            'RemoveItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveItem,
+                    request_deserializer=demo__pb2.RemoveFromWishlistRequest.FromString,
                     response_serializer=demo__pb2.Empty.SerializeToString,
             ),
             'EmptyWishlist': grpc.unary_unary_rpc_method_handler(
                     servicer.EmptyWishlist,
                     request_deserializer=demo__pb2.EmptyWishlistRequest.FromString,
+                    response_serializer=demo__pb2.Empty.SerializeToString,
+            ),
+            'DeleteWishlist': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteWishlist,
+                    request_deserializer=demo__pb2.DeleteWishlistRequest.FromString,
+                    response_serializer=demo__pb2.Empty.SerializeToString,
+            ),
+            'RenameWishlist': grpc.unary_unary_rpc_method_handler(
+                    servicer.RenameWishlist,
+                    request_deserializer=demo__pb2.RenameWishlistRequest.FromString,
+                    response_serializer=demo__pb2.Empty.SerializeToString,
+            ),
+            'MoveWishlistItem': grpc.unary_unary_rpc_method_handler(
+                    servicer.MoveWishlistItem,
+                    request_deserializer=demo__pb2.MoveWishlistItemRequest.FromString,
                     response_serializer=demo__pb2.Empty.SerializeToString,
             ),
     }
@@ -1153,6 +1233,60 @@ class WishlistService(object):
             target,
             '/hipstershop.WishlistService/GetWishlist',
             demo__pb2.GetWishlistRequest.SerializeToString,
+            demo__pb2.GetWishlistResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAllWishlists(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hipstershop.WishlistService/GetAllWishlists',
+            demo__pb2.GetAllWishlistsRequest.SerializeToString,
+            demo__pb2.GetAllWishlistsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hipstershop.WishlistService/RemoveItem',
+            demo__pb2.RemoveFromWishlistRequest.SerializeToString,
             demo__pb2.Empty.FromString,
             options,
             channel_credentials,
@@ -1180,6 +1314,87 @@ class WishlistService(object):
             target,
             '/hipstershop.WishlistService/EmptyWishlist',
             demo__pb2.EmptyWishlistRequest.SerializeToString,
+            demo__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteWishlist(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hipstershop.WishlistService/DeleteWishlist',
+            demo__pb2.DeleteWishlistRequest.SerializeToString,
+            demo__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RenameWishlist(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hipstershop.WishlistService/RenameWishlist',
+            demo__pb2.RenameWishlistRequest.SerializeToString,
+            demo__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MoveWishlistItem(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hipstershop.WishlistService/MoveWishlistItem',
+            demo__pb2.MoveWishlistItemRequest.SerializeToString,
             demo__pb2.Empty.FromString,
             options,
             channel_credentials,
