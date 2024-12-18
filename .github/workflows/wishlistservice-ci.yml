@@ -40,18 +40,27 @@ jobs:
         working-directory: ./src/wishlistservice
         run: |
           . venv/bin/activate
-          pytest --cov --cov-report=xml
+          pytest --cov=src --cov-report=xml
 
-      # 4. Upload results to Codecov
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          # or
+          # api-token: ${{ secrets.CODACY_API_TOKEN }}
+          coverage-reports: ./src/wishlistservice/coverage.xml
+          # or a comma-separated list for multiple reports
+          # coverage-reports: <PATH_TO_REPORT>, <PATH_TO_REPORT>
 
       # 5. Build Docker-Image
       - name: Build Docker image
-        run: echo "Build Docker image..."
+        working-directory: ./src/wishlistservice
+        run: docker build -t wishlist_service:latest .
 
       # Optional: Test Docker image (e.g., start and check)
       - name: Test Docker image
-        run: echo "Test Docker image..."
+        working-directory: ./src/wishlistservice
+        run: |
+          docker run --rm -d --name test-container wishlist_service:latest
+          docker ps | grep test-container  # Check if the container is running
+          docker stop test-container
