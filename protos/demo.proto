@@ -273,7 +273,6 @@ service WishlistService {
   rpc DeleteWishlist(DeleteWishlistRequest) returns (Empty) {}
   rpc RenameWishlist(RenameWishlistRequest) returns (Empty) {}
   rpc MoveWishlistItem(MoveWishlistItemRequest) returns (Empty) {}
-  // copy is also supported but uses addItem since the underlying logic would be the same
 }
 
 message Wishlist {
