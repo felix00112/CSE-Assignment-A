@@ -54,10 +54,12 @@ jobs:
 
       # 5. Build Docker-Image
       - name: Build Docker image
+        working-directory: ./src/wishlistservice
         run: docker build -t wishlist_service:latest .
 
       # Optional: Test Docker image (e.g., start and check)
       - name: Test Docker image
+        working-directory: ./src/wishlistservice
         run: |
           docker run --rm -d --name test-container wishlist_service:latest
           docker ps | grep test-container  # Check if the container is running
