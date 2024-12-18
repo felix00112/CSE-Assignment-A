@@ -26,4 +26,4 @@ COPY . .
 
 EXPOSE 50052
 
-ENTRYPOINT ["python", "wishlist_server.py"]
+ENTRYPOINT ["python", "src/wishlist_server.py"]
