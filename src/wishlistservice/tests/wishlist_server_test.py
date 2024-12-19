@@ -208,5 +208,40 @@ def test_remove_item(wishlist_server, mock_context):
     wishlist_server.redisInstance.srem.assert_called_once_with("1:books", "12345")
     assert isinstance(response, demo_pb2.Empty)
 
+def test_empty_wishlist(wishlist_server, mock_context):
+    # Arrange
+    # create mock for request
+    mock_request = create_autospec(demo_pb2.EmptyWishlistRequest)
+    mock_request.user_id = "1"
+    mock_request.name = "books"
+
+    # mock for get_redis_key
+    wishlist_server.get_redis_key = MagicMock(return_value="1:books")
+
+    # mock for Redis smembers (contains some Items)
+    wishlist_server.redisInstance.smembers = MagicMock(
+        return_value={"item1", "item2", "empty"}
+    )
+
+    # mock for srem (assumes nothing except that it is called)
+    wishlist_server.redisInstance.srem = MagicMock()
+
+    # Act
+    response = wishlist_server.EmptyWishlist(mock_request, mock_context)
+
+    # Assert
+    # Check, if correct key is generated
+    wishlist_server.get_redis_key.assert_called_once_with(mock_request)
+
+    # check, if smembers is called with the correct key
+    wishlist_server.redisInstance.smembers.assert_called_once_with("1:books")
+
+    # Check, if srem only called twice (for item1 & item2, not for empty)
+    wishlist_server.redisInstance.srem.assert_any_call("1:books", "item1")
+    wishlist_server.redisInstance.srem.assert_any_call("1:books", "item2")
+    assert wishlist_server.redisInstance.srem.call_count == 2
+
+    # Check, if return is "demo_pb2.Empty"
+    assert isinstance(response, demo_pb2.Empty)
     if __name__ == "__main__":
         pytest.main()
