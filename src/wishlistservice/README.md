@@ -37,6 +37,15 @@ Test Add Item Endpoint:
 
 `grpcurl -plaintext -import-path protos -proto demo.proto -d '{"user_id": "1234", "name": "defaultwishlist", "item": {"product_id": "6789"}}' localhost:50052 hipstershop.WishlistService/AddItem`
 
+## Commands for testing with Pytest
+Change directory to `src/wishlistservice`
+- Running all Unit Test written for the Wishlist Service:
+  `pytest`
+- Getting Code Coverage in Terminal:
+    `pytest --cov=src --cov-report=term-missing`
+- Creating html Coverage Report:
+  `pytest --cov=src --cov-report=html`
+
 ## How to recompile the Protos file on macOS
 
 1. go to `<replace with path to repository root>/src/wishlistservice`
