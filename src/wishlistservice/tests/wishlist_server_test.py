@@ -154,5 +154,24 @@ def test_get_all_wishlists(wishlist_server, mock_context):
     wishlist_server.get_wishlist_items.assert_any_call("1:electronics", mock_context)
 
 
+def test_add_wishlist(wishlist_server, mock_context):
+    #Arrange
+    mock_request = create_autospec(demo_pb2.AddWishlistRequest)
+    mock_request.user_id = "1"
+    mock_request.name = "books"
+
+
+    wishlist_server.get_redis_key = Mock(return_value="2:books")
+    wishlist_server.redisInstance.sadd = Mock()
+
+    # Act
+    response = wishlist_server.AddWishlist(mock_request, mock_context)
+
+    # Assert
+    wishlist_server.get_redis_key.assert_called_once_with(mock_request)
+    wishlist_server.redisInstance.sadd.assert_called_once_with("2:books", "empty")
+    assert isinstance(response, demo_pb2.Empty)
+
+
     if __name__ == "__main__":
         pytest.main()
