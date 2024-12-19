@@ -322,5 +322,41 @@ def test_rename_wishlist(wishlist_server, mock_context):
 
     # Check return
     assert isinstance(response, demo_pb2.Empty)
+
+
+def test_move_wishlist_item(wishlist_server, mock_context):
+    # Arrange
+    # Mock request
+    mock_request = create_autospec(demo_pb2.MoveWishlistItemRequest)
+    mock_request.user_id = "1"
+    mock_request.source_wishlist_name = "wishlist1"
+    mock_request.target_wishlist_name = "wishlist2"
+    mock_request.item = create_autospec(demo_pb2.WishlistItem)
+    mock_request.item.product_id = "item123"
+
+    # Mocks for `get_redis_key`
+    wishlist_server.get_redis_key = MagicMock(
+        side_effect=["1:source_wishlist_name", "1:target_wishlist_name", "item123"]
+    )
+
+    # Mock for Redis smove
+    wishlist_server.redisInstance.smove = MagicMock()
+
+    # Act
+    response = wishlist_server.MoveWishlistItem(mock_request, mock_context)
+
+    # Assert
+    # Check if get_redis_key was called correctly
+    wishlist_server.get_redis_key.assert_any_call(mock_request, "source_wishlist_name")
+    wishlist_server.get_redis_key.assert_any_call(mock_request, "target_wishlist_name")
+
+    # Check if redis smove was called correctly
+    wishlist_server.redisInstance.smove.assert_called_once_with(
+        "1:source_wishlist_name", "1:target_wishlist_name", "item123"
+    )
+
+    # Check return
+    assert isinstance(response, demo_pb2.Empty)
+
     if __name__ == "__main__":
         pytest.main()
