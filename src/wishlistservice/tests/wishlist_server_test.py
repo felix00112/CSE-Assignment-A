@@ -291,5 +291,36 @@ def test_delete_wishlist(wishlist_server, mock_context):
 
     # Check if return is demo_pb2.Empty
     assert isinstance(response, demo_pb2.Empty)
+
+
+def test_rename_wishlist(wishlist_server, mock_context):
+    # Arrange
+    # Mock-Request
+    mock_request = create_autospec(demo_pb2.RenameWishlistRequest)
+    mock_request.user_id = "1"
+    mock_request.old_name = "old_books"
+    mock_request.new_name = "new_books"
+
+    # mocks for `get_redis_key` return values
+    wishlist_server.get_redis_key = MagicMock(side_effect=["1:old_name", "1:new_name"])
+
+    # Mock for `rename` method im Redis
+    wishlist_server.redisInstance.rename = MagicMock()
+
+    # Act
+    response = wishlist_server.RenameWishlist(mock_request, mock_context)
+
+    # Assert
+    # Check key generation with correct parameter
+    wishlist_server.get_redis_key.assert_any_call(mock_request, "old_name")
+    wishlist_server.get_redis_key.assert_any_call(mock_request, "new_name")
+
+    # Check rename called correctly
+    wishlist_server.redisInstance.rename.assert_called_once_with(
+        "1:old_name", "1:new_name"
+    )
+
+    # Check return
+    assert isinstance(response, demo_pb2.Empty)
     if __name__ == "__main__":
         pytest.main()
