@@ -1,4 +1,4 @@
-name: CD Check Build and Run
+name: CI Build Skaffold
 
 on:
   push:
@@ -35,24 +35,3 @@ jobs:
       # 5. Skaffold Build & Test Deployment (without Push)
       - name: Build and Test with Skaffold
         run: skaffold run --status-check=false --port-forward=false --tail=false
-
-      # - name: Wait for Pods to be Ready
-      #   run: |
-      #     kubectl wait --for=condition=Ready pods --all --timeout=900s || echo "Timeout reached, proceeding with debugging."
-
-      # - name: Describe Failing Pods
-      #   run: |
-      #     echo "Describing non-ready pods:"
-      #     for pod in $(kubectl get pods --field-selector=status.phase!=Running -o name); do
-      #       echo "Details for $pod"
-      #       kubectl describe $pod
-      #     done
-
-      # - name: Logs for Failing Pods
-      #   run: |
-      #     echo "Fetching logs for non-ready pods:"
-      #     for pod in $(kubectl get pods --field-selector=status.phase!=Running -o name); do
-      #       echo "Logs for $pod"
-      #       kubectl logs $pod || echo "No logs available for $pod"
-      #     done
-
