@@ -264,5 +264,32 @@ def test_empty_wishlist_no_items(wishlist_server, mock_context):
     wishlist_server.redisInstance.smembers.assert_called_once_with("1:books")
     wishlist_server.redisInstance.srem.assert_not_called()
     assert isinstance(response, demo_pb2.Empty)
+
+
+def test_delete_wishlist(wishlist_server, mock_context):
+    # Arrange
+    # mock for request object
+    mock_request = create_autospec(demo_pb2.DeleteWishlistRequest)
+    mock_request.user_id = "1"
+    mock_request.name = "books"
+
+    # Mock for get_redis_key method
+    wishlist_server.get_redis_key = MagicMock(return_value="1:books")
+
+    # Mock for Redis delete-method
+    wishlist_server.redisInstance.delete = MagicMock()
+
+    # Act
+    response = wishlist_server.DeleteWishlist(mock_request, mock_context)
+
+    # Assert
+    # Check if get_redis_key is called with correct request object
+    wishlist_server.get_redis_key.assert_called_once_with(mock_request)
+
+    # Check if delete, deletes the right key from redis
+    wishlist_server.redisInstance.delete.assert_called_once_with("1:books")
+
+    # Check if return is demo_pb2.Empty
+    assert isinstance(response, demo_pb2.Empty)
     if __name__ == "__main__":
         pytest.main()
