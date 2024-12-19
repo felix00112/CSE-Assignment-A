@@ -106,6 +106,21 @@ def test_get_wishlist(wishlist_server, mock_context):
     assert len(response.wishlist.items) == 2
     assert response.wishlist.items[0].product_id == "item1"
     assert response.wishlist.items[1].product_id == "item2"
+
+
+def test_add_item_redis_failure(wishlist_server, mock_context):
+    # Arrange
+    request = create_autospec(demo_pb2.AddItemRequest)
+    request.item = create_autospec(demo_pb2.WishlistItem)
+    request.item.product_id = "12345"
+    wishlist_server.get_redis_key = MagicMock(return_value="wishlist:user2")
+    wishlist_server.redisInstance.sadd.side_effect = Exception("Redis error")
+
+    # Act
+    with pytest.raises(Exception, match="Redis error"):
+        wishlist_server.AddItem(request, mock_context)
+
+
     # Arrange
     redis_keys = ["1:books", "1:electronics"]
     wishlist_items1 = [demo_pb2.WishlistItem(product_id="1")]
