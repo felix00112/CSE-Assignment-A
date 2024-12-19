@@ -173,5 +173,23 @@ def test_add_wishlist(wishlist_server, mock_context):
     assert isinstance(response, demo_pb2.Empty)
 
 
+def test_add_item(wishlist_server, mock_context):
+    # Arrange
+    request = create_autospec(demo_pb2.AddItemRequest)
+    request.item = create_autospec(demo_pb2.WishlistItem)
+    request.item.product_id = "12345"
+
+    wishlist_server.get_redis_key = Mock(return_value="1:books")
+    wishlist_server.redisInstance.sadd = Mock()
+
+    # Act
+    response = wishlist_server.AddItem(request, mock_context)
+
+    # Assert
+    wishlist_server.get_redis_key.assert_called_once_with(request)
+    wishlist_server.redisInstance.sadd.assert_called_once_with("1:books", "12345")
+    assert isinstance(response, demo_pb2.Empty)
+
+
     if __name__ == "__main__":
         pytest.main()
