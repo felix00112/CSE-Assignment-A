@@ -208,6 +208,7 @@ def test_remove_item(wishlist_server, mock_context):
     wishlist_server.redisInstance.srem.assert_called_once_with("1:books", "12345")
     assert isinstance(response, demo_pb2.Empty)
 
+
 def test_empty_wishlist(wishlist_server, mock_context):
     # Arrange
     # create mock for request
@@ -242,6 +243,26 @@ def test_empty_wishlist(wishlist_server, mock_context):
     assert wishlist_server.redisInstance.srem.call_count == 2
 
     # Check, if return is "demo_pb2.Empty"
+    assert isinstance(response, demo_pb2.Empty)
+
+
+def test_empty_wishlist_no_items(wishlist_server, mock_context):
+    # Arrange
+    mock_request = create_autospec(demo_pb2.EmptyWishlistRequest)
+    mock_request.user_id = "1"
+    mock_request.name = "books"
+
+    wishlist_server.get_redis_key = MagicMock(return_value="1:books")
+    wishlist_server.redisInstance.smembers = MagicMock(return_value=set())
+    wishlist_server.redisInstance.srem = MagicMock()
+
+    # Act
+    response = wishlist_server.EmptyWishlist(mock_request, mock_context)
+
+    # Assert
+    wishlist_server.get_redis_key.assert_called_once_with(mock_request)
+    wishlist_server.redisInstance.smembers.assert_called_once_with("1:books")
+    wishlist_server.redisInstance.srem.assert_not_called()
     assert isinstance(response, demo_pb2.Empty)
     if __name__ == "__main__":
         pytest.main()
