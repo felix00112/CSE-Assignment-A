@@ -12,6 +12,11 @@ If you’re using this demo, please **★Star** this repository to show your int
 
 **Note to Googlers:** Please fill out the form at [go/microservices-demo](http://go/microservices-demo).
 
+## Wishlist Microservice
+- [Documentation](/src/wishlistservice/README.md) to learn about the implemented Wishlist Microservice.
+
+![Bildschirmfoto 2024-12-19 um 18 17 14](https://github.com/user-attachments/assets/c4e24e46-9005-4a97-afd2-0135600a7f59)
+
 ## Architecture
 
 **Online Boutique** is composed of 11 microservices written in different
@@ -19,6 +24,8 @@ languages that talk to each other over gRPC.
 
 [![Architecture of
 microservices](/docs/img/architecture-diagram.png)](/docs/img/architecture-diagram.png)
+
+
 
 Find **Protocol Buffers Descriptions** at the [`./protos` directory](/protos).
 
