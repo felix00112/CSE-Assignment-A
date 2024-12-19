@@ -58,7 +58,6 @@ def test_get_wishlist_items(wishlist_server, mock_context):
     # Ensure that smembers is called with correct key
     wishlist_server.redisInstance.smembers.assert_called_once_with(wishlistKey)
 
-def test_getAllWishlists(wishlist_server, mock_request, mock_context):
     expected_items = {"item1", "item2"}
 
     returned_items = {item.product_id for item in response}
@@ -69,6 +68,44 @@ def test_getAllWishlists(wishlist_server, mock_request, mock_context):
     assert returned_items == expected_items
 
 
+# Unit Tests for core functions
+
+
+def test_get_wishlist(wishlist_server, mock_context):
+    # Arrange
+    mock_request = MagicMock()
+    mock_request.user_id = "1"
+    mock_request.name = "books"
+
+    # mock for get_redis_key
+    wishlist_server.get_redis_key = MagicMock(return_value="user:1:wishlist:books")
+
+    # mock for get_wishlist_items
+    wishlist_server.get_wishlist_items = MagicMock(
+        return_value=[
+            demo_pb2.WishlistItem(product_id="item1"),
+            demo_pb2.WishlistItem(product_id="item2"),
+        ]
+    )
+
+    # Act
+    response = wishlist_server.GetWishlist(mock_request, mock_context)
+
+    # Assert
+    # Ensure that get_redis_key is called with the correct request
+    wishlist_server.get_redis_key.assert_called_once_with(mock_request)
+
+    # Ensure, that get_wishlist_items is called correctly
+    wishlist_server.get_wishlist_items.assert_called_once_with(
+        "user:1:wishlist:books", mock_context
+    )
+
+    # Check if result has the right format
+    assert isinstance(response, demo_pb2.GetWishlistResponse)
+    assert response.wishlist.name == "books"
+    assert len(response.wishlist.items) == 2
+    assert response.wishlist.items[0].product_id == "item1"
+    assert response.wishlist.items[1].product_id == "item2"
     # Arrange
     redis_keys = ["1:books", "1:electronics"]
     wishlist_items1 = [demo_pb2.WishlistItem(product_id="1")]
