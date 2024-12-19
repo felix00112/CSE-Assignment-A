@@ -2,6 +2,10 @@
 
 For our assignment we have implemented a wishlist into the Google microservices demo project shop. This directory contains the microservice code which is written in python as well as the tests and other files necessary for building etc. . The wishlist data is persistet in the already existing Redis instance. Most of the logic in `wishlist_server` is pretty straightforward as its mostly generating redis keys from the incoming requests and then interacting with Redis. The microservice communicates only communicates with the frontend. This is done with grpc. We added the endpoints, request structure etc. of the wishlist microservice to the existing `demo.protos` file. The names of the dependencies are stored in the `requirements.txt` file so the Dockerfile isn't as crowded. Dependencies are mainly for testing and code coverage.
 
+## Core functionality
+
+Enables the user to create wishlists with a name. Once a wishlist has been created, the user can add products to it. A user can view their wishlists and the products they contain on the wishlist page. Products can be removed from wishlists, moved to other wishlists and be added to the shopping cart. Finally, users can empty and remove wishlists as well as rename them.
+
 ## How to run the project locally
 
 1. Install Docker
