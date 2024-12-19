@@ -165,8 +165,17 @@ func main() {
 	r.HandleFunc(baseUrl+"/_healthz", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "ok") })
 	r.HandleFunc(baseUrl+"/product-meta/{ids}", svc.getProductByID).Methods(http.MethodGet)
 	r.HandleFunc(baseUrl+"/bot", svc.chatBotHandler).Methods(http.MethodPost)
-	r.HandleFunc(baseUrl+"/wishlist", svc.addToWishlistHandler).Methods(http.MethodPost)
-	// r.HandleFunc(baseUrl + "/wishlist", svc.viewCartHandler).Methods(http.MethodGet, http.MethodHead)
+	// we are aware that the added routes for wishlists are absolutely terrible but we just didnt have the time to make this work well with
+	// proper routes since this wouldve needed copious amount of javascript as
+	r.HandleFunc(baseUrl+"/wishlist", svc.viewWishlistsHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(baseUrl+"/wishlist", svc.addWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/api/wishlist", svc.getWishlistsJSONHandler).Methods(http.MethodGet)
+	r.HandleFunc(baseUrl+"/wishlist/empty", svc.emptyWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/wishlist/remove", svc.deleteWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/wishlist/rename", svc.renameWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/wishlist/item/add", svc.addToWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/wishlist/item/remove", svc.removeFromWishlistHandler).Methods(http.MethodPost)
+	r.HandleFunc(baseUrl+"/wishlist/item/move", svc.moveToWishlistHandler).Methods(http.MethodPost)
 
 	var handler http.Handler = r
 	handler = &logHandler{log: log, next: handler}     // add logging

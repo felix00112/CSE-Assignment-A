@@ -68,6 +68,18 @@
             </div>
             <button type="submit" class="cymbal-button-primary">Add To Cart</button>
           </form>
+          <form method="POST" action="{{ $.baseUrl }}/wishlist/item/add">
+            <input type="hidden" name="product_id" value="{{$.product.Item.Id}}" />
+            <div id="addToWishlistContainer">
+              <select name="wishlist_name" id="addToWishlistDropdown" class="cymbal-button-primary">
+                <option value="" disabled selected>Select Wishlist</option>
+                {{ range .wishlists }}
+                  <option value="{{ .Name }}">{{ .Name }}</option>
+                {{ end }}
+              </select>
+              <button type="submit" class="cymbal-button-secondary">Add to Wishlist</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -83,4 +95,5 @@
 
 </main>
 {{ template "footer" . }}
+
 {{ end }}

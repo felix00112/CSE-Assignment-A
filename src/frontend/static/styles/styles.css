@@ -71,6 +71,16 @@ header .cart-size-circle {
   background-color: #853B5C;
 }
 
+header .wishlist-link {
+  position: relative;
+  display: block;
+  margin-left: 25px;
+  display: flex;
+  flex-flow: column;
+  align-items: center;
+  justify-content: center;
+}
+
 header .navbar {
   padding-top: 5px;
   padding-bottom: 5px;

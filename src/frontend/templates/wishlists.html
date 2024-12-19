@@ -1,0 +1,270 @@
+{{ define "wishlists" }}
+    {{ template "header" . }}
+
+    <div {{ with $.platform_css }} class="{{.}}" {{ end }}>
+        <span class="platform-flag">
+            {{$.platform_name}}
+        </span>
+    </div>
+
+    <main role="main" class="wishlists">
+        <div class="container">
+            <div class="row heading-row">
+                <div class="col-12 heading-col">
+                    <h1>Your Wishlists</h1>
+                </div>
+            </div>
+            <div class="row form-row">
+                <div class="col-12 form-col">
+                    <form id="create-wishlist-form" method="POST" action="{{ $.baseUrl }}/wishlist" onsubmit="return validateWishlistForm()">
+                        <button id="show-input-button" class="cymbal-button-primary trigger-add-wishlist-button" type="button" onclick="showWishlistInput()">
+                            Add Wishlist
+                        </button>
+                        <input type="text" id="wishlist-name-input" name="wishlist_name" placeholder="Enter wishlist name" style="display: none">
+                        <button id="create-wishlist-button" class="cymbal-button-primary submit-add-wishlist-button" type="submit" style="display: none;">
+                            Create
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {{ if eq (len .wishlists) 0 }}
+                <div class="row no-wishlists-row">
+                    <div class="col-12 no-wishlists-col">
+                        <h2>You have no wishlists</h2>
+                    </div>
+                </div>
+            {{ else }}
+                <div class="row wishlist-overview-row">
+                    <div class="col-2 wishlist-names-col">
+                        {{ range .wishlists }}
+                            <div class="row wishlist-name-row">
+                                <div class="col-11 wishlist-name-col" data-wishlist-name="{{ .Name }}">
+                                    <a href="#" class="wishlist-link">
+                                        <h3 class="wishlist-link-text">{{ .Name }}</h3>
+                                    </a>
+                                </div>
+                                <div class="col-1 wishlist-edit-col">
+                                    <button id="edit-wishlist-button-{{ .Name }}" class="cymbal-button-primary edit-wishlist-button-{{ .Name }}" type="submit" onclick="showEditWishlistOptions('{{ .Name }}')">
+                                        Edit
+                                    </button>
+                                    <form id="empty-wishlist-form-{{ .Name }}" method="POST" action="{{ $.baseUrl }}/wishlist/empty">
+                                        <input type="hidden" name="wishlist_name" value="{{ .Name }}" />
+                                        <button id="empty-wishlist-button-{{ .Name }}" class="cymbal-button-primary empty-wishlist-button-{{ .Name }}" type="submit" style="display: none;">
+                                            Empty
+                                        </button>
+                                    </form>
+                                    <form id="remove-wishlist-form-{{ .Name }}" method="POST" action="{{ $.baseUrl }}/wishlist/remove">
+                                        <input type="hidden" name="wishlist_name" value="{{ .Name }}" />
+                                        <button id="remove-wishlist-button-{{ .Name }}" class="cymbal-button-primary remove-wishlist-button-{{ .Name }}" type="submit" style="display: none;">
+                                            Remove
+                                        </button>
+                                    </form>
+                                    <button id="show-rename-input-button-{{ .Name }}" class="cymbal-button-primary show-rename-input-button-{{ .Name }}" style="display: none;" onclick="showRenameWishlistInput('{{ .Name }}')">
+                                        Rename
+                                    </button>
+                                    <form id="rename-wishlist-form-{{ .Name }}" method="POST" action="{{ $.baseUrl }}/wishlist/rename">
+                                        <input type="hidden" name="old_wishlist_name" value="{{ .Name }}" />
+                                        <input type="text" id="wishlist-rename-input-{{ .Name }}" name="new_wishlist_name" placeholder="Enter new name" style="display: none">
+                                        <button id="rename-wishlist-button-{{ .Name }}" class="cymbal-button-primary rename-wishlist-button-{{ .Name }}" type="submit" style="display: none;">
+                                            Confirm
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {{ end }}
+                    </div>
+                    <div class="col-10 wishlist-details-col" id="wishlist-details-col">
+                    </div>
+                </div>
+            {{ end }}
+        </div>
+        <div id="base-url" data-base-url="{{ $.baseUrl }}"></div>
+    </main>
+
+    {{ template "footer" . }}
+
+    <script>
+        const baseUrl = "http://localhost:8080";
+        let wishlists = [];
+
+        async function fetchWishlists() {
+            try {
+                const response = await fetch(`${baseUrl}/api/wishlist`, {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Error fetching wishlists:", error);
+                return [];
+            }
+        }
+
+        async function init() {
+            wishlists = await fetchWishlists();
+
+            document.querySelectorAll('.wishlist-name-col').forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const wishlistName = this.getAttribute('data-wishlist-name');
+                    showWishlistItems(wishlistName, wishlists);
+
+                    document.querySelectorAll('.wishlist-name-row').forEach(function(row) {
+                        row.style.backgroundColor = '';
+                    });
+
+                    this.closest('.wishlist-name-row').style.backgroundColor = 'rgba(154, 160, 166, 0.5)';
+                });
+            });
+        }
+
+        function showWishlistInput() {
+            var input = document.getElementById('wishlist-name-input');
+            var showButton = document.getElementById('show-input-button');
+            var createButton = document.getElementById('create-wishlist-button');
+            input.style.display = 'inline-block';
+            createButton.style.display = 'inline-block';
+            showButton.style.display = 'none';
+            input.focus();
+        }
+
+        function showEditWishlistOptions(wishlistEditName) {
+            var showEditOptionsButton = document.getElementById('edit-wishlist-button-'+wishlistEditName);
+            var emptyWishlistButton = document.getElementById('empty-wishlist-button-'+wishlistEditName);
+            var removeWishlistButton = document.getElementById('remove-wishlist-button-'+wishlistEditName);
+            var renameWishlistButton = document.getElementById('show-rename-input-button-'+wishlistEditName);
+            emptyWishlistButton.style.display = 'inline-block';
+            removeWishlistButton.style.display = 'inline-block';
+            renameWishlistButton.style.display = 'inline-block';
+            showEditOptionsButton.style.display = 'none';
+        }
+
+        function showRenameWishlistInput(wishlistRenameName) {
+            var showRenameWishlistInputButton = document.getElementById('show-rename-input-button-'+wishlistRenameName);
+            var renameWishlistInput = document.getElementById('wishlist-rename-input-'+wishlistRenameName);
+            var confirmRenameButton = document.getElementById('rename-wishlist-button-'+wishlistRenameName);
+            renameWishlistInput.style.display = 'inline-block';
+            confirmRenameButton.style.display = 'inline-block';
+            showRenameWishlistInputButton.style.display = 'none';
+            renameWishlistInput.focus();
+        }
+    
+        function validateWishlistForm() {
+            var input = document.getElementById('wishlist-name-input');
+            if (input.value.trim() === '') {
+                alert('Please enter a wishlist name.');
+                return false;
+            }
+            return true;
+        }
+
+        function showWishlistItems(wishlistName) {
+            const wishlistDetailsCol = document.getElementById('wishlist-details-col');
+            wishlistDetailsCol.innerHTML = '';
+
+            console.log("Available wishlists for matching:", wishlists);
+            const selectedWishlist = wishlists.find(wishlist => wishlist.Name === wishlistName);
+            if (!selectedWishlist) {
+                return;
+            } else if (selectedWishlist.Items.length === 0) {
+                wishlistDetailsCol.innerHTML = '<div class="row wishlist-item-row">'+
+                                                    '<div class="col-12 empty-wishlist-col">'+
+                                                        '<h3>No products in this wishlist</h3>'+
+                                                    '</div>'+
+                                                '</div>';
+            } else {
+                console.log("Generating item html for " + wishlistName);
+                selectedWishlist.Items.forEach(item => {
+                    var itemDiv = document.createElement('div');
+                    itemDiv.className = 'row wishlist-item-row';
+                    itemDiv.innerHTML = `
+                        <div class="col-4 item-image-col">
+                            <a href="{{ $.baseUrl }}/product/${item.Item.id}">
+                                <img loading="lazy" src="{{ $.baseUrl }}${item.Item.picture}" class="img-fluid" alt="Product Image">
+                            </a>
+                        </div>
+                        <div class="col-4 item-infos-col">
+                            <div class="row item-name-row">
+                                <div class="col-12 item-name-col">
+                                    <h3>${item.Item.name}</h3>
+                                </div>
+                            </div>
+                            <div class="row item-price-row">
+                                <div class="col-12 item-price-col">
+                                    <h3>${renderMoney(item.Price)}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4 item-actions-col">
+                            <div class="row add-to-cart-row">
+                                <div class="col-12 add-to-cart-col">
+                                    <form method="POST" action="{{ $.baseUrl }}/cart">
+                                        <input type="hidden" name="product_id" value="${item.Item.id}" />
+                                        <input type="hidden" name="quantity" value="1" />
+                                        <button type="submit" class="cymbal-button-primary">Add To Cart</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="row other-actions-row">
+                                <div class="col-6 move-item-col">
+                                    <form method="POST" action="{{ $.baseUrl }}/wishlist/item/move">
+                                        <input type="hidden" name="product_id" value="${item.Item.id}" />
+                                        <input type="hidden" name="source_wishlist_name" value="${wishlistName}" />
+                                        <select name="target_wishlist_name" id="move-between-wishlists-dropdown" class="cymbal-form-field">
+                                            <option value="" disabled selected>Move to</option>
+                                            ${wishlists.map(w => `<option value="${w.Name}">${w.Name}</option>`).join('')}
+                                        </select>
+                                        <button id="move-item-button" type="submit" class="cymbal-button-primary move-item-button">
+                                            Confirm
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-6 remove-item-col">
+                                    <form id="remove-item-form" method="POST" action="{{ $.baseUrl }}/wishlist/item/remove">
+                                        <input type="hidden" name="product_id" value="${item.Item.id}" />
+                                        <input type="hidden" name="wishlist_name" value="${wishlistName}" />
+                                        <button id="remove-item-button" class="cymbal-button-primary remove-item-button" type="submit">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    wishlistDetailsCol.appendChild(itemDiv);
+                });
+            }
+        }
+
+        function renderCurrencyLogo(currencyCode) {
+        switch (currencyCode) {
+            case 'USD':
+                return '$';
+            case 'EUR':
+                return '€';
+            case 'GBP':
+                return '£';
+            default:
+                return '';
+            }
+        }
+
+        function renderMoney(money) {
+            const currencyLogo = renderCurrencyLogo(money.currency_code);
+            const units = money.units;
+            const nanos = Math.floor(money.nanos / 10000000);
+            return `${currencyLogo}${units}.${nanos.toString().padStart(2, '0')}`;
+        }
+
+        init();
+    </script>
+
+{{ end }}

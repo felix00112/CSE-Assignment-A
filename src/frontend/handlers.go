@@ -180,6 +180,12 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 		log.WithField("error", err).Warn("failed to get product recommendations")
 	}
 
+	wishlists, err := fe.getAllWishlists(r.Context(), sessionID(r))
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve wishlists"), http.StatusInternalServerError)
+		return
+	}
+
 	product := struct {
 		Item  *pb.Product
 		Price *pb.Money
@@ -203,6 +209,7 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 		"recommendations": recommendations,
 		"cart_size":       cartSize(cart),
 		"packagingInfo":   packagingInfo,
+		"wishlists":       wishlists,
 	})); err != nil {
 		log.Println(err)
 	}
@@ -634,40 +641,247 @@ func stringinSlice(slice []string, val string) bool {
 	return false
 }
 
-func (fe *frontendServer) addToWishlistHandler(w http.ResponseWriter, r *http.Request) {
+func (fe *frontendServer) addWishlistHandler(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	wishlistName := r.FormValue("wishlist_name")
 
-	if err := fe.addItemToWishlist(r.Context(), "1234", "frontendwishlist", "fe_product"); err != nil {
-		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to cart"), http.StatusInternalServerError)
+	// TODO implement validation if enough time
+
+	log.WithField("wishlist", wishlistName).Debug("added new wishlist")
+
+	if err := fe.addWishlist(r.Context(), sessionID(r), wishlistName); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to create wishlist"), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("location", baseUrl+"/wishlist")
 	w.WriteHeader(http.StatusFound)
 }
 
-// func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Request) {
-// 	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
-// 	quantity, _ := strconv.ParseUint(r.FormValue("quantity"), 10, 32)
-// 	productID := r.FormValue("product_id")
-// 	payload := validator.AddToCartPayload{
-// 		Quantity:  quantity,
-// 		ProductID: productID,
-// 	}
-// 	if err := payload.Validate(); err != nil {
-// 		renderHTTPError(log, r, w, validator.ValidationErrorResponse(err), http.StatusUnprocessableEntity)
-// 		return
-// 	}
-// 	log.WithField("product", payload.ProductID).WithField("quantity", payload.Quantity).Debug("adding to cart")
+func (fe *frontendServer) addToWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	productID := r.FormValue("product_id")
+	wishlistName := r.FormValue("wishlist_name")
 
-// 	p, err := fe.getProduct(r.Context(), payload.ProductID)
-// 	if err != nil {
-// 		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve product"), http.StatusInternalServerError)
-// 		return
-// 	}
+	// TODO implement validation if enough times
 
-// 	if err := fe.insertCart(r.Context(), sessionID(r), p.GetId(), int32(payload.Quantity)); err != nil {
-// 		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to cart"), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	w.Header().Set("location", baseUrl + "/cart")
-// 	w.WriteHeader(http.StatusFound)
-// }
+	log.WithField("product", productID).Debug("adding to wishlist")
+
+	p, err := fe.getProduct(r.Context(), productID)
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve product"), http.StatusInternalServerError)
+		return
+	}
+
+	if err := fe.addItem(r.Context(), sessionID(r), wishlistName, p.GetId()); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to add to wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/product/"+productID)
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) getWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	wishlistName := r.FormValue("wishlist_name")
+
+	// TODO implement validation if enough time
+
+	log.WithField("wishlist", wishlistName).Debug("displaying wishlist")
+
+	if err := fe.addWishlist(r.Context(), sessionID(r), wishlistName); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to create wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) viewWishlistsHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	log.Debug("viewing all wishlists")
+
+	wishlists, err := fe.getAllWishlists(r.Context(), sessionID(r))
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve wishlists"), http.StatusInternalServerError)
+		return
+	}
+
+	type productView struct {
+		Item  *pb.Product
+		Price *pb.Money
+	}
+
+	type wishlistView struct {
+		Name  string
+		Items []productView
+	}
+
+	wishlistViews := make([]wishlistView, len(wishlists))
+	for i, wishlist := range wishlists {
+		wishlistItems := make([]productView, len(wishlist.Items))
+		for j, item := range wishlist.Items {
+			p, err := fe.getProduct(r.Context(), item.GetProductId())
+			if err != nil {
+				renderHTTPError(log, r, w, errors.Wrapf(err, "could not retrieve product #%s", item.GetProductId()), http.StatusInternalServerError)
+				return
+			}
+			price, err := fe.convertCurrency(r.Context(), p.GetPriceUsd(), currentCurrency(r))
+			if err != nil {
+				renderHTTPError(log, r, w, errors.Wrapf(err, "could not convert currency for product #%s", item.GetProductId()), http.StatusInternalServerError)
+				return
+			}
+			wishlistItems[j] = productView{Item: p, Price: price}
+		}
+		log.WithField("wishlist_name", wishlist.Name).WithField("wishlist_items", wishlistItems).Debug("Fetched wishlist")
+		wishlistViews[i] = wishlistView{Name: wishlist.Name, Items: wishlistItems}
+	}
+
+	if err := templates.ExecuteTemplate(w, "wishlists", injectCommonTemplateData(r, map[string]interface{}{
+		"wishlists": wishlistViews,
+	})); err != nil {
+		log.Error(err)
+	}
+}
+
+func (fe *frontendServer) getWishlistsJSONHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	log.Debug("fetching all wishlists")
+
+	wishlists, err := fe.getAllWishlists(r.Context(), sessionID(r))
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve wishlists"), http.StatusInternalServerError)
+		return
+	}
+
+	type productView struct {
+		Item  *pb.Product
+		Price *pb.Money
+	}
+
+	type wishlistView struct {
+		Name  string
+		Items []productView
+	}
+
+	wishlistViews := make([]wishlistView, len(wishlists))
+	for i, wishlist := range wishlists {
+		wishlistItems := make([]productView, len(wishlist.Items))
+		for j, item := range wishlist.Items {
+			p, err := fe.getProduct(r.Context(), item.GetProductId())
+			if err != nil {
+				renderHTTPError(log, r, w, errors.Wrapf(err, "could not retrieve product #%s", item.GetProductId()), http.StatusInternalServerError)
+				return
+			}
+			price, err := fe.convertCurrency(r.Context(), p.GetPriceUsd(), currentCurrency(r))
+			if err != nil {
+				renderHTTPError(log, r, w, errors.Wrapf(err, "could not convert currency for product #%s", item.GetProductId()), http.StatusInternalServerError)
+				return
+			}
+			wishlistItems[j] = productView{Item: p, Price: price}
+		}
+		log.WithField("wishlist_name", wishlist.Name).WithField("wishlist_items", wishlistItems).Debug("Fetched wishlist")
+		wishlistViews[i] = wishlistView{Name: wishlist.Name, Items: wishlistItems}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(wishlistViews); err != nil {
+		log.Errorf("failed to encode wishlists: %v", err)
+		http.Error(w, "failed to encode wishlists", http.StatusInternalServerError)
+	}
+}
+
+func (fe *frontendServer) removeFromWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	productID := r.FormValue("product_id")
+	wishlistName := r.FormValue("wishlist_name")
+
+	// TODO implement validation if enough time
+
+	log.WithField("product", productID).Debug("removing from wishlist")
+
+	p, err := fe.getProduct(r.Context(), productID)
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve product"), http.StatusInternalServerError)
+		return
+	}
+
+	if err := fe.removeItem(r.Context(), sessionID(r), wishlistName, p.GetId()); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to remove from wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) emptyWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	wishlistName := r.FormValue("wishlist_name")
+
+	// TODO implement validation if enough time
+
+	log.WithField("wishlistName", wishlistName).Debug("emptying wishlist")
+
+	if err := fe.emptyWishlist(r.Context(), sessionID(r), wishlistName); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to empty wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) deleteWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	wishlistName := r.FormValue("wishlist_name")
+
+	// TODO implement validation if enough time
+
+	log.WithField("wishlistName", wishlistName).Debug("deleting wishlist")
+
+	if err := fe.deleteWishlist(r.Context(), sessionID(r), wishlistName); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to delete wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) renameWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	oldWishlistName := r.FormValue("old_wishlist_name")
+	newWishlistName := r.FormValue("new_wishlist_name")
+
+	// TODO implement validation if enough time
+
+	log.WithField("oldWishlistName", oldWishlistName).WithField("newWishlistName", newWishlistName).Debug("changing wishlist name")
+
+	if err := fe.renameWishlist(r.Context(), sessionID(r), oldWishlistName, newWishlistName); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to rename wishlist"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}
+
+func (fe *frontendServer) moveToWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	log := r.Context().Value(ctxKeyLog{}).(logrus.FieldLogger)
+	sourceWishlistName := r.FormValue("source_wishlist_name")
+	targetWishlistName := r.FormValue("target_wishlist_name")
+	productID := r.FormValue("product_id")
+
+	// TODO implement validation if enough time
+
+	log.WithField("product", productID).WithField("sourceWishlist", sourceWishlistName).WithField("targetWishlist", targetWishlistName).Debug("moving item between wishlists")
+
+	p, err := fe.getProduct(r.Context(), productID)
+	if err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "could not retrieve product"), http.StatusInternalServerError)
+		return
+	}
+
+	if err := fe.moveWishlistItem(r.Context(), sessionID(r), sourceWishlistName, targetWishlistName, p.GetId()); err != nil {
+		renderHTTPError(log, r, w, errors.Wrap(err, "failed to move item between wishlists"), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("location", baseUrl+"/wishlist")
+	w.WriteHeader(http.StatusFound)
+}

@@ -24,6 +24,7 @@ def handle_redis_connection_error(func):
         try:
             return func(self, request, context)
         except redis.ConnectionError:
+            logger.info('Failed to connect to Redis')
             context.set_details('Failed to connect to Redis')
             context.set_code(grpc.StatusCode.INTERNAL)
             return demo_pb2.Empty()
@@ -128,7 +129,6 @@ class WishlistService(demo_pb2_grpc.WishlistServiceServicer):
         return demo_pb2.Empty()
     
     @handle_redis_connection_error
-    # TODO make sure to only check that the old key exists
     def RenameWishlist(self, request, context):
         old_wishlistKey = self.get_redis_key(request, 'old_name')
         new_wishlistKey = self.get_redis_key(request, 'new_name')
