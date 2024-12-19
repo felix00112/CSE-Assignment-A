@@ -121,18 +121,24 @@ def test_add_item_redis_failure(wishlist_server, mock_context):
         wishlist_server.AddItem(request, mock_context)
 
 
+def test_get_all_wishlists(wishlist_server, mock_context):
     # Arrange
     redis_keys = ["1:books", "1:electronics"]
     wishlist_items1 = [demo_pb2.WishlistItem(product_id="1")]
     wishlist_items2 = [demo_pb2.WishlistItem(product_id="2")]
 
+    request = create_autospec(demo_pb2.GetAllWishlistsRequest)
+    request.user_id = "1"
+
     wishlist_server.redisInstance.keys.return_value = redis_keys
 
     # Mock the get_wishlist_items method
-    wishlist_server.get_wishlist_items = Mock(side_effect=[wishlist_items1, wishlist_items2])
+    wishlist_server.get_wishlist_items = Mock(
+        side_effect=[wishlist_items1, wishlist_items2]
+    )
 
     # Act
-    response = wishlist_server.GetAllWishlists(mock_request, mock_context)
+    response = wishlist_server.GetAllWishlists(request, mock_context)
 
     # Assert
     assert len(response.wishlists) == 2
